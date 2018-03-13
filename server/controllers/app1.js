@@ -167,33 +167,27 @@ function calculateEstimatedTime(){
         promiseArray.push(Order.findOneAndUpdate({"_id":  order._id}, { $set:{ "arrivalDate":  estimatedTime}},{new:true}));
       });
       return Promise.all(promiseArray);
-    })
+    })  
 }
 
-function getArrivalTime(){
+function getArrivalTime(orderId){
   return calculateEstimatedTime()
-  .then(data => {
-    data.forEach(order => {    
-      console.log("for chosen odrer id: ", order._id, "arrival date is ",order.arrivalDate);   
-    })
-  })
-}
-
-
-function getArrivalTimeForOneOrder(orderId){
-  console.log("1");
-  return calculateEstimatedTime()
-  .then(data =>{
-    console.log('/////////');
+  .then((data)=>{ 
     data.forEach(order => {
-      if(order._id==orderId)
-       console.log("for one chosen odrer id: ", order._id, "arrival date is ",order.arrivalDate);
-    });
+      if(orderId==undefined){  
+      console.log("for chosen odrer id: ", order._id, "arrival date is ",order.arrivalDate); 
+      }
+      else{
+        if(order._id==orderId)
+        console.log("for one chosen odrer id: ", order._id, "arrival date is ",order.arrivalDate);      
+      }      
+    })
   })
-  }
+}
 
+
+getArrivalTime('5aa697339c9fdd6ae1f0da26');
 getArrivalTime();
-//getArrivalTimeForOneOrder("5aa69bc39c9fdd6ae1f0da2e");
 
 db.close();
   });
