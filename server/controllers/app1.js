@@ -11,11 +11,10 @@ var Promise = require('promise');
 module.exports = (app) => {
   app.get('/data', function(req, res) {
 
-  MongoClient.connect(MONGO_URL, (err, db) => {  
+ MongoClient.connect(MONGO_URL, (err, db) => {  
  mongoose.connect(MONGO_URL);
-
-var Order = mongoose.model("Order",mongooseSchema.orderScheme,"order");
-var Cars = mongoose.model("Cars", mongooseSchema.carScheme);
+ var Order = mongoose.model("Order",mongooseSchema.orderScheme,"order");
+ var Cars = mongoose.model("Cars", mongooseSchema.carScheme);
 
 
 //add new car
@@ -44,7 +43,7 @@ function send_a_car(orderId,time_){
   var finishTime = new Date(Date.now()+Number(time_));
   console.log(orderId,'time: ',finishTime);
   var car;
- Cars.findOneAndUpdate({status:false},{ $set: { order_id: orderId,status:true,finish_time: finishTime} },{new:true})
+ return Cars.findOneAndUpdate({status:false},{ $set: { order_id: orderId,status:true,finish_time: finishTime} },{new:true})
  .then(carResult =>{ 
    if(carResult==null)
     return;
@@ -88,64 +87,8 @@ function send_a_car(orderId,time_){
 //   });
 // });
 
-
-
-
-
-// function calculateEstimatedTime(){
-//   var orderResult; 
-//   var counterForOrder=0;
-//   var counterForCars=0;
-//   var estimatedTime=[];    
-//   var counter=0;
-//   var orderCount=0;
-//   var promiseArray=[];
-//   return Order.find({'status':'in the store'})
-//     .sort({date: 1})
-//     .then(data => {
-//       if(!data)
-//        return;
-//       orderCount=data.length;
-//       orderResult = data;
-//       return Cars.find({'status':true});    
-//     })
-//     .then(cars =>{
-//       if(!cars)
-//        return;
-//       cars.forEach(car=>{
-//         estimatedTime[counter]=car.finish_time;
-//         counter++;
-//       }) 
-//     })
-//     .then(()=>{
-//       return Cars.find({'status':false});
-//     })
-//     .then(cars => {
-//       var carsCount;
-//        carsCount = cars.length;
-//        orderResult.forEach(order => {
-//          if(counterForCars!=carsCount){
-//           estimatedTime[counter] = new Date(+Date.now()+order.time.value*1000);
-//           promiseArray.push(Order.findOneAndUpdate({"_id":  order._id}, { $set:{ "arrivalDate":  estimatedTime[counterForOrder]}},{new:true}));
-//           counter++;
-//           counterForCars++;
-//           counterForOrder++;
-//          }
-//        })
-//        return estimatedTime;
-//     })
-//     .then((estTime)=>{
-//       while(counterForOrder!=orderCount){
-//         estTime.sort((a, b) => a - b);
-//         estTime[0] =new Date(+new Date(estTime[0])+orderResult[counterForOrder].time.value*1000);
-//         promiseArray.push(Order.findOneAndUpdate({"_id":  orderResult[counterForOrder]._id}, { $set:{ "arrivalDate":  estTime[0]}},{new:true}));
-//        counterForOrder++; 
-//       }
-//       return Promise.all( promiseArray);
-//     })   
-// }
-
 function calculateEstimatedTime(){
+  console.log('1');
   var orderResult;
   return Order.find({'status':'in the store'}).sort({date: 1})
     .then(orders=>{
@@ -158,36 +101,133 @@ function calculateEstimatedTime(){
       var promiseArray=[];
       var estimatedTime;
       orderResult.forEach(order => {
+        //console.log(order._id,' ',order.date,' ',order.time.text);
         carsResult.sort((a, b) => a.finish_time - b.finish_time);
-        if(carsResult[0].finish_time==null)
-          estimatedTime = new Date(+Date.now()+Number(order.time.value)*1000);
-        else
-          estimatedTime=new Date(+carsResult[0].finish_time+Number(order.time.value)*1000);
+        estimatedTime=getEstimate(carsResult[0].finish_time,order.time.value);
         carsResult[0].finish_time=estimatedTime;
         promiseArray.push(Order.findOneAndUpdate({"_id":  order._id}, { $set:{ "arrivalDate":  estimatedTime}},{new:true}));
       });
+      console.log('5');
       return Promise.all(promiseArray);
-    })  
+    })
+    .catch(function (error) {
+      console.log('an error occurred');
+    });
+}
+
+function getEstimate(finishTime,orderTime){
+  if(finishTime==null)
+    estimatedTime = new Date(+Date.now()+Number(orderTime)*1000);
+  else
+    estimatedTime = new Date(+finishTime+Number(orderTime)*1000);
+  return estimatedTime;      
 }
 
 function getArrivalTime(orderId){
-  return calculateEstimatedTime()
-  .then((data)=>{ 
-    data.forEach(order => {
-      if(orderId==undefined){  
-      console.log("for chosen odrer id: ", order._id, "arrival date is ",order.arrivalDate); 
+  if(orderId){
+    Order.findOne({'_id':orderId})
+    .then(orderResult=>{
+      if(orderResult==null){
+        console.log('sorry, the order with such id does not exist.');
+        return;
+      }
+      if(orderResult.status=="delivered"){
+       console.log('the order ',orderResult._id, 'already delivered');
+       return;
+      }
+      if(orderResult.arrivalDate){
+        console.log("for odrer id: ", orderResult._id, "arrival date is ",orderResult._id);
       }
       else{
-        if(order._id==orderId)
-        console.log("for one chosen odrer id: ", order._id, "arrival date is ",order.arrivalDate);      
-      }      
+        return calculateEstimatedTime()
+        .then((data)=>{
+          data.some(order => {
+            if(order._id==orderId){
+              console.log("for odrer id: ", order._id, "arrival date is ",order._id);
+              }
+          })
+        });
+      }
     })
+  }
+}
+
+getArrivalTime("5aa697339c9fdd6ae1f0da26");
+
+function getArrivalTimeForAll(){
+  return calculateEstimatedTime()
+  .then((data)=>{
+    return Order.find();
+  })
+  .then(orders=>{
+    orders.forEach(order => {
+      getArrivalTime(order._id);
+    });
   })
 }
 
+//getArrivalTimeForAll();
 
-getArrivalTime('5aa697339c9fdd6ae1f0da26');
-getArrivalTime();
+
+
+
+// function getArrivalTime(orderId){
+//   console.log('1');
+//   return calculateEstimatedTime()
+//   .then((data)=>{ 
+//     console.log('2');
+//     data.forEach(order => {
+//       showOrdersArrivalDate(order._id,order.arrivalDate,orderId);   
+//     })
+//   })
+// }
+
+// function checkIfArrivalDateIsNull(orderId){ //true if some order has null value
+//   var timeIsNull=false;
+//   return Order.find()
+//   .then((orders)=>{
+//     if(orderId==undefined){
+//       timeIsNull = orders.some(order=>{return order.arrivalDate==null});
+//     }
+//     else{
+//       timeIsNull = orders.some(order=>String(order._id)==orderId && order.arrivalDate==null);
+//     }
+//      console.log(timeIsNull);
+//     return timeIsNull;
+//   })
+// }
+
+// function showOrdersArrivalDate(id,arrivalDate,orderId){
+//   if(orderId==undefined){
+//     console.log("for chosen odrer id: ", id, "arrival date is ",arrivalDate); 
+//     }
+//     else{
+//       if(id==orderId)
+//       console.log("for one chosen odrer id: ", id, "arrival date is ",arrivalDate);      
+//     }
+// }
+
+// function getArrivalTime(orderId){
+//   var checkNullValue =checkIfArrivalDateIsNull(orderId);
+//   checkNullValue.then((chekedValue)=>{
+//     if(chekedValue){
+//       return calculateEstimatedTime()
+//       .then((data)=>{
+//         data.forEach(order => {
+//           showOrdersArrivalDate(order._id,order.arrivalDate,orderId);
+//         })
+//       })
+//     }
+//     else{
+//       Order.find({$or:[{'status':'in the store'},{'status':'on the way'}]})
+//       .then(orders=>{
+//         orders.forEach(order => {
+//           showOrdersArrivalDate(order._id,order.arrivalDate,orderId);
+//         })
+//       })
+//     }
+//   })
+// }
 
 db.close();
   });
