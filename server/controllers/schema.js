@@ -33,10 +33,14 @@ var orderScheme = new Schema({
   })
   
   var carScheme = new Schema({
-    status:{ type: Boolean, default: false },// true-car is busy, false-car is empty
+    status:{
+      type: String,
+      enum: ['is busy', 'available']},
     capacity:{ type: Number, default: 1 },
-    order_id:{ type: String, default: null },
-    finish_time:{ type: Date, default: null },
+    orderId:{ type: String, default: null },
+    endTime:{ type: Date, default: null },
+    availableTime:{type: Date, default: null},
+    active:{type:Boolean, default: false}
   })
 
   module.exports={orderScheme,carScheme}

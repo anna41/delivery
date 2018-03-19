@@ -1,5 +1,6 @@
 import React from 'react';
 import axios from 'axios';
+import Table from "./Table"
 
 export default class HomePage extends React.Component {
 	constructor(props){
@@ -15,12 +16,12 @@ export default class HomePage extends React.Component {
 	}
 
 	render() {
-		var data = this.state.data;
 		return (
-			<div>
-			{data.map(item =>
-				  <h2>{item._id}</h2>				 
-				)}
+			<div > 				
+				<Table />
+				{data.map(item =>
+				  <h2>{item.text}</h2>
+				)};
 			</div>
 		);
 	}
