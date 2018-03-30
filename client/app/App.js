@@ -1,20 +1,22 @@
 import React, {Component} from 'react';
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
-import Dropdown from "./components/Table";
+import CarTable from "./components/Table";
+import AddCarButton from "./components/AddCarButton";
 
 
 class App extends Component{
 
-
     render(){
-        return (
+        return (         
             <MuiThemeProvider>
             <div>
-                <Dropdown />
+                <CarTable />
+                <AddCarButton />
             </div>
-            </MuiThemeProvider>
-        )
+            </MuiThemeProvider>          
+        );
     }
 }
 
 export default App;
+  

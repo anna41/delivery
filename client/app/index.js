@@ -2,42 +2,14 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { render } from 'react-dom';
-import App from './App'
-
-import HomePage from 'components/home';
-
-ReactDOM.render(
- <App />,
- document.getElementById('root')
-);
+import { Provider } from 'react-redux';
+import App from './App';
+import store from './store';
 
 
-
-
-// import React from 'react';
-// import { render } from 'react-dom';
-// import { Router, Route, IndexRoute, browserHistory } from 'react-router';
-
-// import HomePage from 'components/home';
-
-// const style = {
-// 	content: {
-// 		margin: 'auto',
-// 		padding: '25px',
-// 		width: '1200px',
-// 		height: '800px',
-// 		backgroundColor: 'rgb(244, 244, 244)'
-// 	}
-// }
-
-// render(
-// 		<div style={style.content}>
-// 			<Router history={browserHistory}>
-// 				<Route path="/" component={HomePage}>
-// 					<IndexRoute component={HomePage} />
-// 				</Route>
-// 			</Router>
-// 		</div>,
-//     document.getElementById('app')
-// );
-
+  ReactDOM.render(
+    <Provider store={store}>
+      <App />
+    </Provider>,
+    document.getElementById('root')
+  );

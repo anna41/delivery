@@ -7,34 +7,26 @@ import {
     TableRow,
     TableRowColumn,
   } from 'material-ui/Table';
-import Checkbox from 'material-ui/Checkbox';
 import axios from 'axios';
+import { connect } from 'react-redux';
+import FlatButton from 'material-ui/FlatButton';
+import ActionDelete from 'material-ui/svg-icons/action/delete';
+import CheckBox from "./CheckBox"
+import DeleteCarButton from "./DeleteCarButton";
+import {loadCars} from '../logic';
 
 
 class MyTable extends Component{
 
     constructor(props){
-		super(props);
-
-		this.state = {
-			data: []
-		}
+        super(props);
 	}
 
-    
-    //   updateCheck() {
-    //     this.setState((oldState) => {
-    //       return {
-    //         checked: !oldState.checked,
-    //       };
-    //     });
-    //   }
+    componentWillMount(){
+        this.props.loadCars();
+    }
 
-      componentWillMount(){
-		axios.get('/data').then(response => this.setState({data: response.data}));
-	}
     render(){
-        var data = this.state.data;
         return(
             <div>
                 <h1> Cars</h1>
@@ -49,25 +41,33 @@ class MyTable extends Component{
                     <TableHeaderColumn>Status</TableHeaderColumn>
                     <TableHeaderColumn>Available Time</TableHeaderColumn>
                     <TableHeaderColumn>Active</TableHeaderColumn>
+                    <TableHeaderColumn></TableHeaderColumn>
                 </TableRow>
                 </TableHeader>
                 <TableBody
                  displayRowCheckbox={false}>
-                    {data.map((result) => (
-                        <TableRow key={result._id}>     
-                            <TableRowColumn>{result._id}</TableRowColumn>                      
-                            <TableRowColumn>{result.status}</TableRowColumn>
-                            <TableRowColumn>{result.availableTime}</TableRowColumn>
-                            <TableRowColumn><Checkbox
-                            checked = {result.active}
-                            /></TableRowColumn>
+                    {this.props.cars.map((car,index) => (
+                        <TableRow key={index}>     
+                            <TableRowColumn>{car._id}</TableRowColumn>                      
+                            <TableRowColumn>{car.status}</TableRowColumn>
+                            <TableRowColumn class="check">{car.availableTime}</TableRowColumn>
+                            <TableRowColumn>
+                               <CheckBox {...car}/>
+                            </TableRowColumn>
+                            <TableRowColumn>
+                                <DeleteCarButton {...car}/>
+                            </TableRowColumn>
                         </TableRow>
                     ))}
-                </TableBody>
+                </TableBody>               
                 </Table>
             </div>
         )
     }
 }
 
-export default MyTable;
+export default connect(
+    state => ({
+      cars: state.cars
+    }), {loadCars}
+)(MyTable);
