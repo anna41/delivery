@@ -15,10 +15,7 @@ class CheckBox extends Component{
         this.props.updateCarCheckBox(car);
     }
     
-      
-
     render(){
-        console.log("car",this.props);
         return (
           <Checkbox
             defaultChecked = {this.props.active}

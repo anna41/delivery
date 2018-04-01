@@ -50,7 +50,7 @@ class MyTable extends Component{
                         <TableRow key={index}>     
                             <TableRowColumn>{car._id}</TableRowColumn>                      
                             <TableRowColumn>{car.status}</TableRowColumn>
-                            <TableRowColumn class="check">{car.availableTime}</TableRowColumn>
+                            <TableRowColumn>{car.availableTime}</TableRowColumn>
                             <TableRowColumn>
                                <CheckBox {...car}/>
                             </TableRowColumn>

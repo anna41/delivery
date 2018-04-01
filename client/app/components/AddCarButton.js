@@ -28,7 +28,6 @@ class AddCarButton extends Component{
 }
 
 export default connect(
-    state => ({
-    }), {loadCar}
+    null, {loadCar}
 )(AddCarButton);
 

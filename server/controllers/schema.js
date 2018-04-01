@@ -24,7 +24,6 @@ var orderScheme = new Schema({
     status:{
       type: String,
       enum: ['in the store', 'on the way','delivered']},
-    carId: String,
     items: [
         {
             name: String,
@@ -53,7 +52,8 @@ var orderScheme = new Schema({
       lat: String,
       lng: String,
       address: String
-    },
+    }
   })
+
 
   module.exports={orderScheme,carScheme}

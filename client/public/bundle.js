@@ -31711,7 +31711,7 @@
 	                                ),
 	                                _react2.default.createElement(
 	                                    _Table.TableRowColumn,
-	                                    { className: 'check' },
+	                                    null,
 	                                    car.availableTime
 	                                ),
 	                                _react2.default.createElement(
@@ -40254,7 +40254,6 @@
 	    }, {
 	        key: 'render',
 	        value: function render() {
-	            console.log("car", this.props);
 	            return _react2.default.createElement(_Checkbox2.default, {
 	                defaultChecked: this.props.active,
 	                onClick: this.onClickCheckBox.bind(this, this.props)
@@ -40297,6 +40296,8 @@
 
 	var _reactRedux = __webpack_require__(184);
 
+	var _logic = __webpack_require__(451);
+
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -40315,21 +40316,17 @@
 	    }
 
 	    _createClass(DeleteCarButton, [{
-	        key: 'onDelete',
-	        value: function onDelete(car) {
-	            var that = this;
-	            _axios2.default.post('/delete', {
-	                car: car
-	            }).then(function (response) {
-	                that.props.deleteCar(response.data);
-	            });
+	        key: 'onDeleleButton',
+	        value: function onDeleleButton(car) {
+	            console.log("in delete", car);
+	            this.props.onDelete(car);
 	        }
 	    }, {
 	        key: 'render',
 	        value: function render() {
 	            return _react2.default.createElement(_FlatButton2.default, {
-	                icon: _react2.default.createElement(_delete2.default, null)
-	                //onClick = {this.onDelete.bind(this,result)}
+	                icon: _react2.default.createElement(_delete2.default, null),
+	                onClick: this.onDeleleButton.bind(this, this.props)
 	            });
 	        }
 	    }]);
@@ -40337,15 +40334,7 @@
 	    return DeleteCarButton;
 	}(_react.Component);
 
-	exports.default = (0, _reactRedux.connect)(function (state) {
-	    return {};
-	}, function (dispatch) {
-	    return {
-	        deleteCar: function deleteCar(input) {
-	            dispatch({ type: 'DELETE_CAR', payload: input });
-	        }
-	    };
-	})(DeleteCarButton);
+	exports.default = (0, _reactRedux.connect)(null, { onDelete: _logic.onDelete })(DeleteCarButton);
 
 /***/ }),
 /* 451 */
@@ -40356,7 +40345,7 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.updateCarCheckBox = exports.loadCar = exports.loadCars = undefined;
+	exports.onDelete = exports.updateCarCheckBox = exports.loadCar = exports.loadCars = undefined;
 
 	var _axios = __webpack_require__(418);
 
@@ -40375,8 +40364,10 @@
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	var loadCars = exports.loadCars = function loadCars() {
+	  console.log("load car");
 	  return function (dispatch, getState) {
 	    _axios2.default.get('/data').then(function (response) {
+	      console.log("in response");
 	      return dispatch(carActions.addCars(response.data));
 	    });
 	  };
@@ -40385,8 +40376,11 @@
 	var loadCar = exports.loadCar = function loadCar() {
 	  console.log("load car");
 	  return function (dispatch, getState) {
-	    _axios2.default.post('/cars').then(function (response) {
-	      return dispatch(carActions.addCar(response.data));
+	    _axios2.default.put('/car').then(function (response) {
+	      if (response.data == "Success") {
+	        console.log("Success");
+	        return dispatch(loadCars());
+	      }
 	    });
 	  };
 	};
@@ -40394,10 +40388,24 @@
 	var updateCarCheckBox = exports.updateCarCheckBox = function updateCarCheckBox(car) {
 	  console.log("car in update", car);
 	  return function (dispatch, getState) {
-	    _axios2.default.post('/check', {
-	      car: car
-	    }).then(function (response) {
-	      return dispatch(carActions.updateCar(response.data));
+	    _axios2.default.put('/car/' + car._id).then(function (response) {
+	      if (response.data == "Success") {
+	        console.log("Success");
+	        return dispatch(loadCars());
+	      }
+	    });
+	  };
+	};
+
+	var onDelete = exports.onDelete = function onDelete(car) {
+	  console.log("car id in delete", car._id);
+	  return function (dispatch, getState) {
+	    _axios2.default.delete('/car/' + car._id).then(function (response) {
+	      console.log(response);
+	      if (response.data == "Success") {
+	        console.log("Success");
+	        return dispatch(loadCars());
+	      }
 	    });
 	  };
 	};
@@ -57614,9 +57622,7 @@
 	    return AddCarButton;
 	}(_react.Component);
 
-	exports.default = (0, _reactRedux.connect)(function (state) {
-	    return {};
-	}, { loadCar: _logic.loadCar })(AddCarButton);
+	exports.default = (0, _reactRedux.connect)(null, { loadCar: _logic.loadCar })(AddCarButton);
 
 /***/ }),
 /* 455 */
@@ -58362,13 +58368,11 @@
 	    var action = arguments[1];
 
 	    if (action.type === 'ADD_CARS') {
-	        return [].concat(_toConsumableArray(state), _toConsumableArray(action.payload));
+	        return [].concat(_toConsumableArray(action.payload));
 	    } else if (action.type === 'ADD_CAR') {
 	        console.log("in reducer", action.payload);
 	        return [].concat(_toConsumableArray(state), [action.payload]);
 	    } else if (action.type === 'UPDATE_CARS') {
-	        return action.payload;
-	    } else if (action.type === 'DELETE_CAR') {
 	        return action.payload;
 	    }
 	    return state;

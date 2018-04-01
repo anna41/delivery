@@ -31,7 +31,7 @@ module.exports = (app) => {
     }
 
 
-    function calculatePossibleAvailableTime(car,orderStartPoint){
+    function getCarWithCalculatedTimeOfDelivery(car,orderStartPoint){
       return calculateTimeBetweenTwoPoints(car.possible_arrival_point,orderStartPoint)
           .then(time =>{
             car.availableTime = checkIfTheAvailableDateIsUpToDate(car.availableTime);
@@ -40,7 +40,7 @@ module.exports = (app) => {
           })
     }
 
-    function findNearestCarToOrder(cars){
+    function chooseNearestCarToOrder(cars){
       var nearestCar={};
           var bestTime = new Date(+Date.now()+10*365*24*60*60*1000);
           cars.forEach(car => {
@@ -59,19 +59,19 @@ module.exports = (app) => {
         orderPoints = data;
         return getActiveCars();
       })
-      .then(cars=>{
-        let carsArr = findNearestCarForAll(cars, orderId, orderPoints);
+      .then(cars=>{       
+        let carsArr = getAllCarsWithCalculatedTimeOfDelivery(cars, orderId, orderPoints);
         return Promise.all(carsArr)
-        .then(cars=>{         
-          return findNearestCarToOrder(cars);
+        .then(cars=>{        
+          return chooseNearestCarToOrder(cars);
        })
      })
     }
 
-    function findNearestCarForAll(cars, orderId, orderPoints) {
+    function getAllCarsWithCalculatedTimeOfDelivery(cars, orderId, orderPoints) {
       return cars.map(car => {
         car.orderId = orderId;
-        return calculatePossibleAvailableTime(car, orderPoints[0]);
+        return getCarWithCalculatedTimeOfDelivery(car, orderPoints[0]);
       });
     }
 
@@ -85,18 +85,15 @@ module.exports = (app) => {
       .then(cars=>{
         console.log("here")
         carsWithOrdersDetails = _.groupBy(cars, '_id');
-        return getCarsId();
+        return getActiveCarsId();
       })
       .then(carsId=>{
         for(let i = 0;i<carsId.length;i++){
-          let carWithNearestOrder = findClosestOrder(carsWithOrdersDetails,carsId,i);
-          //console.log("carWithNearestOrder",carWithNearestOrder)
+          let carWithNearestOrder = findCarWithClosestOrder(carsWithOrdersDetails,carsId,i);
           if(carWithNearestOrder){
             odrersIdInQueue.push(carWithNearestOrder.orderId);
-            //console.log("odrersIdInQueue",odrersIdInQueue);
             return Order.findOne({"_id":carWithNearestOrder.orderId})
             .then(order=>{
-              //console.log("order",order);
               return changeCarData(carWithNearestOrder, order);
             })
           }
@@ -108,6 +105,19 @@ module.exports = (app) => {
       })
     }
 
+    function findCarWithClosestOrder(carsWithOrdersDetails,carsId,i){
+      if(!carsWithOrdersDetails[carsId[i]]){
+        return;
+      }
+      let bestCar = carsWithOrdersDetails[carsId[i]][0];
+      carsWithOrdersDetails[carsId[i]].forEach(car => {
+        if(car.availableTime<bestCar.availableTime){
+          bestCar = car;
+        }
+      });
+      return bestCar;     
+    }
+
     function changeCarData(carWithNearestOrder, order) {
       let promiseArray =[];
       let arrivalTime = new Date(+carWithNearestOrder.availableTime + Number(order.time.value) * 1000);
@@ -116,7 +126,7 @@ module.exports = (app) => {
           $push: { nextOrders: carWithNearestOrder.orderId }
         }, { new: true })
       );
-      console.log("id",order._id,"time",arrivalTime);
+      //console.log("id",order._id,"time",arrivalTime);
       promiseArray.push(Order.findByIdAndUpdate(order._id,{$set: {arrivalDate:arrivalTime}},{new:true}));
       return Promise.all(promiseArray);
     }
@@ -140,8 +150,6 @@ module.exports = (app) => {
       if(orders.length>0){
        addNearestOrdersToQueue(orders)
         .then(ordersId=>{
-          //console.log("orders",orders);
-         // console.log("ordersId",ordersId)
          setEstimateForNewOrders(orders,ordersId);
         })
       }
@@ -152,41 +160,27 @@ module.exports = (app) => {
       return Cars.find()
       .then(cars=>{
         cars.forEach(car => {
-          carsArray.push(Cars.findOneAndUpdate({"_id":car._id},{ $set: {possible_arrival_point:car.departure_point,nextOrders:[]} },{new:true}));
+          let availableDate = car.endTime;
+          if(!availableDate){
+            availableDate = new Date(Date.now());
+          }
+          carsArray.push(Cars.findOneAndUpdate({"_id":car._id},{ $set: {possible_arrival_point:car.departure_point,nextOrders:[],availableTime:availableDate} },{new:true}));
         });
         return Promise.all(carsArray);
       })
     }
 
     function recalculateAllOrdersQueue(){
-      let orders;
       return resetCarData()
-      .then((data)=>{
-        //console.log(data)
+      .then(()=>{
         return getOrdersThatIsInTheStore();
       })
-      .then(data=>{
-        orders = data;
+      .then(orders=>{
         setEstimateForNewOrders(orders,[]);
       })
     }
 
-    recalculateAllOrdersQueue();
-
-    function findClosestOrder(carsWithOrdersDetails,carsId,i){
-      if(!carsWithOrdersDetails[carsId[i]]){
-        return;
-      }
-      let bestCar = carsWithOrdersDetails[carsId[i]][0];
-      carsWithOrdersDetails[carsId[i]].forEach(car => {
-        if(car.availableTime<bestCar.availableTime){
-          bestCar = car;
-        }
-      });
-      return bestCar;     
-    }
-
-    function getCarsId(){
+    function getActiveCarsId(){
       return Cars.find({active:true})
       .then(cars=>{
         let carsId=[];
@@ -202,19 +196,22 @@ module.exports = (app) => {
     }
    
     function calculateTimeBetweenTwoPoints(start,end) {
+      //console.log("start",start);
+      //console.log("end",end);
       var time;
-        return googleMapsClient.directions({
-          origin:  start,
-          destination: end,
-          mode: 'driving'
-        }).
-        asPromise()
-        .then(data=>{
-          return data.json.routes[0].legs[0].duration.value;;
-        })
-        .catch(data=>{
-          console.log("something went wrong")
-        })
+      return googleMapsClient.directions({
+        origin:  start,
+        destination: end,
+        mode: 'driving'
+      }).
+      asPromise()
+      .then(data=>{
+        console.log("time in google",data.json.routes[0].legs[0].duration.value);
+        return data.json.routes[0].legs[0].duration.value;
+      })
+      .catch(data=>{
+        console.log("something went wrong")
+      })
     }
 
     function addOrderToQueue(order,car){
@@ -228,93 +225,52 @@ module.exports = (app) => {
       promiseArray.push(Order.findByIdAndUpdate(order._id,{$set: {arrivalDate:arrivalTime}},{new:true}));
       return Promise.all(promiseArray);
     }
-    
-    function getOrdersWithGivenId(ordersId){
-      let orders=[];
-      ordersId.forEach(orderId => {
-        orders.push(Order.findById(orderId));
-      });
-      return Promise.all(orders);
-    }
-    
 
-    function setEstimateForNewOrder(orderId){
-      let order;
-      return getOrder(orderId)
-      .then(data=>{
-        order=data;
-        return getNearestCarForOrder(orderId)
-      })
-      .then(car=>{
-        console.log(car);
-        return addOrderToQueue(order,car);
-      })
-      .then(data=>{
-        console.log("done");
-      })
-    }
-
-    function getOrder(orderId){
-      return Order.findOne({"_id":orderId});
-    }
-
-   // setEstimateForNewOrder("5aa69ae49c9fdd6ae1f0da2a");
-
-
-    //ТРЕБА ЗАМІНИТИ POST на PUT!!!
     //add new car 
-    app.post('/cars', (request, response)=>{
+    app.put('/car', (request, response)=>{
       console.log("here");
       var car = new Cars({});
-      car.save(function(err){
+      car.save((err)=>{
         if(err)
          return console.log(err);
         console.log("Saved");
       });
-      if (err) {
-        return console.log(err);
-      }
-      response.send(car);
+      response.send("Success");
     });
 
-    //delete car
-    app.delete('/cars/:id', function(req, res) {
-
-      carDelete(req.params.id)
-      .then((data)=>{
-       return getCars();
-      })
-      .then(data=>{
-        res.send(data);
+    app.delete('/car/:id', (req, res)=> {
+      Cars.remove({"_id":req.params.id})
+      .then(()=>{
+        res.send("Success");
       })
     });
-    //ТРЕ ЗАМІНИТИ НА ДВА UPDATE CAR І ПОВЕРНУТИ ЗНАЧЕННЯ
-  //app.post('/cars');
-    app.post('/update', function(req, res) {
-        
-      var availableDate = new Date(Date.now());
-    console.log("available time:",req.body);
-      Cars.findOneAndUpdate({"_id":req.body.car._id},{ $set: { active: !req.body.car.active,availableTime:availableDate} },{new:true})
-      .then((data)=>{
-        console.log("all cars",data);
-        return calculateEstimateForAllOrders();
+
+    //update after change value of checkBox
+    app.put('/car/:id', (req, res)=> {   
+      return Cars.findById(req.params.id)
+      .then((car)=>{
+        var availableDate = new Date(Date.now());
+        if(car.endTime){
+          availableDate = car.endTime;
+        }
+        return Cars.update({"_id":car._id}, { $set: { active: !car.active,availableTime:availableDate }},{new:true})
       })
       .then(()=>{
-        return getCars();
+        return Promise.resolve(recalculateAllOrdersQueue());
       })
+      .then(()=>{
+        res.send("Success");
+      })
+    });
+
+    app.get('/data', (req, res)=> {
+      return getCars()
       .then(data=>{
         res.send(data);
       })
     });
 
-    app.get('/data', function(req, res) {
-      getCars()
-      .then(data=>{
-        res.send(data);
-      })
-    });
-
-    function carDelete(carId){    
+    function carDelete(carId){  
       return  Cars.remove({"_id":carId});
     }
 
@@ -333,57 +289,71 @@ module.exports = (app) => {
          carDate = nowDate;
         return carDate;
     }
-
-    function getOrderTime(orderId){
-      return Order.findOne({"_id":orderId})
+    
+    function getTimeOnTheWay(orderId){
+      return Order.findById(orderId)
       .then(order=>{
-        return order.time.value;
+        return new Date(+Date.now()+Number(order.time.value)*1000);
       })
     }
-    
 
-    function sendCar(orderId,time){
-      console.log(time);
-      var finishTime = new Date(+Date.now()+Number(time)*1000);
-      var car;
-      Cars.findOneAndUpdate({$and:[{status: "available"},{active:true}]},{ $set: { orderId: orderId,status:"is busy",endTime: finishTime} },{new:true})
-      .then(carResult =>{ 
-       if(carResult==null)
-        return;
-       car=carResult;
-       return Order.findOneAndUpdate({"_id":  orderId}, { "status": 'on the way'}, { multi: true });
+    function sendCar(orderId,carId){
+      let finishTime;     
+      return Promise.all([getTimeOnTheWay(orderId),getStartAndEndPointsOfOrder(orderId)])
+      .then(data=>{
+        finishTime=data[0];
+        point = data[1][1];
+       return Cars.findOneAndUpdate({"_id":carId},{ $set: { orderId: orderId,status:"is busy",endTime: finishTime,departure_point:point} },{new:true});
       })
-      .then(orderResult=>{
-        console.log("1",finishTime);
-        finishTime=new Date(+finishTime+2*60*60*1000);
-        console.log("2",finishTime);
-        var job = new CronJob(finishTime, function() {
-          console.log('her');          
-            Order.findOneAndUpdate({"_id":  orderResult._id}, { $set:{ "status": 'delivered'}},{new:true}).exec();
-            Cars.findOneAndUpdate({"_id": car._id}, { $set:{ orderId: null,status:"available",endTime:null}},{new:true}).exec();          
-        });
+      .then(car =>{ 
+        if(!car){
+          return;
+        }
+        return carOnTheWay(finishTime, car, orderId);
+      })
+    }
+
+    function carOnTheWay(finishTime, car,orderId) {
+      return Order.findOneAndUpdate({"_id":  orderId}, { "status": 'on the way'})
+      .then(order=>{       
+        var job = new CronJob(finishTime,()=> {
+         console.log('here');
+          return Promise.all([
+            Order.findOneAndUpdate({ "_id": order._id }, { $set: { status: 'delivered', arrivalDate: Date.now() } }, { new: true }),
+            Cars.findOneAndUpdate({ "_id": car._id }, { 
+              $set: { orderId: null, status: "available", endTime: null },
+              $pop: { nextOrders: -1 }
+            }, { new: true })
+          ]);
+        },null,false,'Europe/Kiev');
+        console.log("1");
         job.start();
-      });
+      })
+    }
+
+    function takeNewOrders(){
+      return Order.find({arrivalDate:null});
     }
     
-    // cron.schedule('* * * * *', function(){
+    // cron.schedule('* * * * *', ()=>{
     //   console.log('running a task every minute');
     //   return Cars.find({$and:[{status: "available"},{active:true}]})
-    //   .then(carsResult=> {
-    //     var carCount = carsResult.length;
-    //     console.log("count car",carCount)
-    //     if(carCount==0)
-    //      return;
-    //     else
-    //      return Order.find({"status": 'in the store'}).sort({date: 1}).limit(carCount)
-    //   })
-    //   .then(orders=> {  
-    //     console.log(orders);
-    //       if(!orders)
-    //         return;
-    //       orders.forEach(order => {
-    //         return sendCar(order._id,order.time.value);       
-    //       });      
+    //   .then(cars=> { 
+    //     let value = true;
+    //     cars.forEach(car => {
+    //       if(car.nextOrders.length>0){
+    //         sendCar(car.nextOrders[0],car._id);
+    //       }
+    //       else{
+    //         if(value){
+    //           value = false;
+    //           takeNewOrders()
+    //           .then(orders=>{
+    //             return setEstimateForNewOrders(orders,[]);
+    //           })
+    //         }
+    //       }
+    //     });      
     //   });
     // });
 
@@ -426,15 +396,9 @@ module.exports = (app) => {
       }) 
     }
 
-    function getOrderStatus(orderId){
-      Order.findOne({"_id":orderId})
-      .then(order=>{
-        return order.status;
-      })
-    }
-
     db.close();
 
   })
 }
+
 
