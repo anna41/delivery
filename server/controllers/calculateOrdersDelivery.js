@@ -65,10 +65,8 @@ Order = mongoose.model("Order",mongooseSchema.orderScheme,"order");
       .then(cars=>{       
         let carsArr = getAllCarsWithCalculatedTimeOfDelivery(cars, orderId, orderPoints);
         return Promise.all(carsArr)
-        .then(cars=>{        
-          return chooseNearestCarToOrder(cars);
+        .then(chooseNearestCarToOrder);
        })
-     })
     }
 
     function chooseNearestCarToOrder(cars){
@@ -162,14 +160,14 @@ Order = mongoose.model("Order",mongooseSchema.orderScheme,"order");
       return bestCar;     
     }
 
-    function setEstimateForNewOrders(orders,ordersId){
+    function setEstimateForNewOrders(orders, ordersId = []){
       if(ordersId.length>0){
         orders = deleteAddedOrders(orders,ordersId);
       }
       if(orders.length>0){
-       addNearestOrdersToQueue(orders)
+       return addNearestOrdersToQueue(orders)
         .then(ordersId=>{
-         setEstimateForNewOrders(orders,ordersId);
+          return setEstimateForNewOrders(orders,ordersId);
         })
       }
     }
@@ -182,12 +180,8 @@ Order = mongoose.model("Order",mongooseSchema.orderScheme,"order");
 
     function recalculateAllOrdersQueue(){
       return resetCarData()
-      .then(()=>{
-        return getOrdersThatIsInTheStore();
-      })
-      .then(orders=>{
-        setEstimateForNewOrders(orders,[]);
-      })
+      .then(() => getOrdersThatIsInTheStore())
+      .then(orders=> setEstimateForNewOrders(orders));
     }
 
     function resetCarData(){
@@ -209,4 +203,12 @@ Order = mongoose.model("Order",mongooseSchema.orderScheme,"order");
       return Order.find({status:"in the store"});
     }
   
-    module.exports={getStartAndEndPointsOfOrder,setEstimateForNewOrders,addOrderToQueue,recalculateAllOrdersQueue,getOrdersThatIsInTheStore,checkIfTheAvailableDateIsUpToDate}
+    module.exports={
+      getStartAndEndPointsOfOrder,
+      setEstimateForNewOrders,
+      addOrderToQueue,
+      recalculateAllOrdersQueue,
+      getOrdersThatIsInTheStore,
+      checkIfTheAvailableDateIsUpToDate,
+      deleteAddedOrders
+    }

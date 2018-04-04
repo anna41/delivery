@@ -82,7 +82,10 @@ module.exports = (app) => {
 
     function sendCar(orderId,carId){
       let finishTime;     
-      return Promise.all([getTimeOnTheWay(orderId),ordersDelivery.getStartAndEndPointsOfOrder(orderId)])
+      return Promise.all([
+        getDeliveryTimeForOrder(orderId),
+        ordersDelivery.getStartAndEndPointsOfOrder(orderId)
+      ])
       .then(data=>{
         finishTime=data[0];
         point = data[1][1];
@@ -96,11 +99,9 @@ module.exports = (app) => {
       })
     }
 
-    function getTimeOnTheWay(orderId){
+    function getDeliveryTimeForOrder(orderId){
       return Order.findById(orderId)
-      .then(order=>{
-        return new Date(+Date.now()+Number(order.time.value)*1000);
-      })
+      .then(order => new Date(+Date.now()+Number(order.time.value)*1000))
     }
 
     function carOnTheWay(finishTime, car,orderId) {
@@ -122,7 +123,10 @@ module.exports = (app) => {
     }
 
     function takeNewOrders(){
-      return Order.find({arrivalDate:null});
+      return Order.find({arrivalDate:null})
+      .then(orders=>{
+        return _.take(_.sortBy(orders, ['date']),10);
+      })
     }
     
     // cron.schedule('* * * * *', ()=>{
@@ -156,42 +160,23 @@ module.exports = (app) => {
     }
     
     function getAllOrdersId(){
-      return Order.find()
-      .then(orders=>{
-        var ordersId=[];
-        orders.forEach(order => {
-          ordersId.push(order._id);
-        });
-        return ordersId;
-      })
+      return Order.find().map(i => i._id);
     }
     
     function getEstimateForOrders(ordersId){
-      var ordersEstimate=[];
-      return (new Promise(resolve=> {
+      return new Promise(resolve=> {
         if(!ordersId){
-          getAllOrdersId()
-          .then(
-            resolve
-          )
+          return getAllOrdersId()
+          .then(resolve)
         }
-        else{
-          resolve(ordersId);
-        }
-      }))
-      .then(ordersId=>{
-        ordersId.forEach(orderId => {
-          ordersEstimate.push(getEstimateForOrder(orderId));
-        });
-        return ordersEstimate;
-      }) 
+        return resolve(ordersId);
+      })
+      .map(getEstimateForOrder); 
     }
 
     function getOrderStatus(orderId){
       return Order.findById(orderId)
-      .then(order=>{
-        return order.status;
-      })
+      .then(order=> order.status)
     }
 
 }

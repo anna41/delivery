@@ -21,14 +21,15 @@ class Orders extends Component{
 
     constructor(props) {
         super(props);
+        this.getOrders = this.getOrders.bind(this);
     }
 
     componentWillMount(){
         this.props.loadOrders('all');
     }
 
-    getOrders(t,tp,status){
-        this.props.loadOrders(status.props.value);
+    getOrders(status){
+        this.props.loadOrders(status);
     }
 
     render(){
@@ -39,8 +40,7 @@ class Orders extends Component{
                 <Tabs>
                 <Tab 
                     label="All orders" 
-                    value = "all"
-                    onActive={this.getOrders.bind(this,this.props,'status')}
+                    onActive={() => this.getOrders('all')}
                 >
                 <div>
                     <TableForOrders/>
@@ -48,8 +48,7 @@ class Orders extends Component{
                 </Tab>
                 <Tab 
                     label="Delivered orders" 
-                    value = "delivered"
-                    onActive={this.getOrders.bind(this,this.props,'status')}
+                    onActive={() => this.getOrders('delivered')}
                 >
                 <div>
                     <TableForOrders/>
@@ -57,8 +56,7 @@ class Orders extends Component{
                 </Tab>
                 <Tab 
                     label="On the way orders" 
-                    value = "on the way"
-                    onActive={this.getOrders.bind(this,this.props,'status')}
+                    onActive={() => this.getOrders('on the way')}
                 >
                 <div>
                     <TableForOrders/>
@@ -66,8 +64,7 @@ class Orders extends Component{
                 </Tab>
                 <Tab 
                     label="In the store orders" 
-                    value= "in the store"
-                    onActive={this.getOrders.bind(this,this.props,'status')}
+                    onActive={() => this.getOrders('in the store')}
                 >
                 <div>
                     <TableForOrders/>
