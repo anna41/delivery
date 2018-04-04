@@ -3,6 +3,7 @@ import thunk from 'redux-thunk';
 
 
 import carsReducer from './reducers/cars';
+import ordersReducer from './reducers/orders';
 
 
 const middlewares = [
@@ -10,7 +11,8 @@ const middlewares = [
 ]
 
 const store = createStore(combineReducers({
-    cars: carsReducer
+    cars: carsReducer,
+    orders: ordersReducer
 }), {}, compose(applyMiddleware(...middlewares)));
 
 export default store;

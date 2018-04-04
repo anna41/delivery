@@ -3,7 +3,7 @@ import axios from 'axios';
 import FloatingActionButton from 'material-ui/FloatingActionButton';
 import ContentAdd from 'material-ui/svg-icons/content/add';
 import { connect } from 'react-redux';
-import {loadCar} from '../logic';
+import {addCar} from '../logic';
 
 class AddCarButton extends Component{
 
@@ -13,7 +13,7 @@ class AddCarButton extends Component{
 
     
     addCarOnClick(){
-        this.props.loadCar();
+        this.props.addCar();
     }
       
 
@@ -28,6 +28,6 @@ class AddCarButton extends Component{
 }
 
 export default connect(
-    null, {loadCar}
+    null, {addCar}
 )(AddCarButton);
 

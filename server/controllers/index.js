@@ -1,3 +1,3 @@
 module.exports = {
-	set: (app) => require('./app1')(app)
+	set: (app) => require('./app')(app)
 }

@@ -1,9 +1,10 @@
 import axios from 'axios';
 import * as carActions from './actions/cars';
 import _ from 'lodash';
+import * as orderActions from './actions/orders';
 
 export const loadCars = () => {
-  console.log("load car");
+  console.log("load cars");
   return (dispatch, getState) => {
     axios.get('/data')
     .then(response => {
@@ -13,8 +14,9 @@ export const loadCars = () => {
   }
 };
 
-export const loadCar = () => {
-  console.log("load car");
+
+export const addCar = () => {
+  console.log("add car");
   return (dispatch, getState) => {
     axios.put('/car')
     .then(response => {
@@ -49,6 +51,15 @@ export const onDelete = (car) => {
         console.log("Success");
         return dispatch(loadCars());
       }
+    });
+  }
+};
+
+export const loadOrders = (status) => {
+  return (dispatch, getState) => {
+    axios.get('/orders/'+status)
+    .then(response => {
+        return dispatch(orderActions.loadOrders(response.data));
     });
   }
 };

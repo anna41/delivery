@@ -13,7 +13,7 @@ class DeleteCarButton extends Component{
 
 
     onDeleleButton(car){
-        console.log("in delete",car);
+        console.log("in delete");
         this.props.onDelete(car);
     }
       
