@@ -30,16 +30,17 @@ class MyTable extends Component{
         return(
             <div>
                 <h1> Cars</h1>
-                <Table>
+                <Table fixedHeader={false} style={{ tableLayout: 'auto' }}>
                 <TableHeader
                 adjustForCheckbox={false}
                 displayRowCheckbox = {false}
                 displaySelectAll={false}
                 >
                 <TableRow>
-                    <TableHeaderColumn>ID</TableHeaderColumn>
+                    <TableHeaderColumn>Name</TableHeaderColumn>
                     <TableHeaderColumn>Status</TableHeaderColumn>
                     <TableHeaderColumn>Available Time</TableHeaderColumn>
+                    <TableHeaderColumn>Possible arrival point</TableHeaderColumn>
                     <TableHeaderColumn>Active</TableHeaderColumn>
                     <TableHeaderColumn></TableHeaderColumn>
                 </TableRow>
@@ -48,9 +49,10 @@ class MyTable extends Component{
                  displayRowCheckbox={false}>
                     {this.props.cars.map((car,index) => (
                         <TableRow key={index}>     
-                            <TableRowColumn>{car._id}</TableRowColumn>                      
+                            <TableRowColumn>{car.carName}</TableRowColumn>                      
                             <TableRowColumn>{car.status}</TableRowColumn>
                             <TableRowColumn>{car.availableTime}</TableRowColumn>
+                            <TableRowColumn>{(car.possibleArrivalPoint.address ? car.possibleArrivalPoint.address : "")}</TableRowColumn>
                             <TableRowColumn>
                                <CheckBox {...car}/>
                             </TableRowColumn>

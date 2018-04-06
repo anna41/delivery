@@ -2,7 +2,7 @@ var mongoose = require("mongoose");
 var Schema = mongoose.Schema;
 mongoose.Promise = global.Promise;
 var orderScheme = new Schema({
-  departure_point: {
+  departurePoint: {
       lat: {
         type: Number,
         required: true
@@ -13,7 +13,7 @@ var orderScheme = new Schema({
       },
       address: String
   },
-  arrival_point: {
+  arrivalPoint: {
     lat: {
       type: Number,
       required: true
@@ -65,17 +65,17 @@ var orderScheme = new Schema({
     availableTime:{type: Date, default: Date.now()},
     active:{type:Boolean, default: false},
     nextOrders: {type:Array, default:[]},
-    departure_point: {
+    carName:{type:"String"},
+    departurePoint: {
       lat: { type: String, default: "51.066104098755986" },
       lng: { type: String, default: "24.756574630737305" },
       address: { type: String, default: "Т0311, Volyns'ka oblast, Ukraine" },
     },
-    possible_arrival_point: {
+    possibleArrivalPoint: {
       lat: String,
       lng: String,
       address: String
     }
   })
-
 
   module.exports={orderScheme,carScheme}

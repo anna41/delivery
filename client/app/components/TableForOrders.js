@@ -34,6 +34,7 @@ class TableForOrders extends Component{
                     <TableHeaderColumn>Status</TableHeaderColumn>
                     <TableHeaderColumn>From</TableHeaderColumn>
                     <TableHeaderColumn>To</TableHeaderColumn>
+                    <TableHeaderColumn>Arrival Time</TableHeaderColumn>
                 </TableRow>
                 </TableHeader>
                 <TableBody
@@ -42,8 +43,9 @@ class TableForOrders extends Component{
                         <TableRow key={index}>     
                             <TableRowColumn>{order._id}</TableRowColumn>                      
                             <TableRowColumn>{order.status}</TableRowColumn>
-                            <TableRowColumn>{order.departure_point.address}</TableRowColumn>
-                            <TableRowColumn>{order.arrival_point.address}</TableRowColumn>
+                            <TableRowColumn>{order.departurePoint.address}</TableRowColumn>
+                            <TableRowColumn>{order.arrivalPoint.address}</TableRowColumn>
+                            <TableRowColumn>{order.arrivalDate}</TableRowColumn>
                         </TableRow>
                     ))}
                 </TableBody>               

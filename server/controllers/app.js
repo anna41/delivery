@@ -16,18 +16,20 @@ module.exports = (app) => {
     app.put('/car', (request, response)=>{
       console.log("here");
       var car = new Cars({});
-      car.save((err)=>{
-        if(err)
-         return console.log(err);
-        console.log("Saved");
-      });
-      response.send("Success");
+      response.send(car.save());
+    });
+
+    app.put('/newCar/:name', (request, response)=>{
+      console.log("here at add",request.params.name);
+      var car = new Cars({"carName":request.params.name});
+      car.possibleArrivalPoint = car.departurePoint;
+      response.send(car.save());
     });
 
     app.delete('/car/:id', (req, res)=> {
       carDelete(req.params.id)
-      .then(()=>{
-        res.send("Success");
+      .then((data)=>{
+        res.send(data);
       })
     });
     
@@ -74,6 +76,7 @@ module.exports = (app) => {
 
     function getOrders(status){
       if(status==='all'){
+        console.log("status in get",status);
         return Order.find();
       }
       return Order.find({status:status});
@@ -89,7 +92,7 @@ module.exports = (app) => {
       .then(data=>{
         finishTime=data[0];
         point = data[1][1];
-       return Cars.findOneAndUpdate({"_id":carId},{ $set: { orderId: orderId,status:"is busy",endTime: finishTime,departure_point:point} },{new:true});
+       return Cars.findOneAndUpdate({"_id":carId},{ $set: { orderId: orderId,status:"is busy",endTime: finishTime,departurePoint:point} },{new:true});
       })
       .then(car =>{ 
         if(!car){
@@ -107,19 +110,23 @@ module.exports = (app) => {
     function carOnTheWay(finishTime, car,orderId) {
       return Order.findOneAndUpdate({"_id":  orderId}, { "status": 'on the way'})
       .then(order=>{       
-        var job = new CronJob(finishTime,()=> {
-         console.log('here');
-          return Promise.all([
-            Order.findOneAndUpdate({ "_id": order._id }, { $set: { status: 'delivered', arrivalDate: Date.now() } }, { new: true }),
-            Cars.findOneAndUpdate({ "_id": car._id }, { 
-              $set: { orderId: null, status: "available", endTime: null },
-              $pop: { nextOrders: -1 }
-            }, { new: true })
-          ]);
-        },null,false,'Europe/Kiev');
+        var job = imitationOfOrderOnTheWay(finishTime, order, car);
         console.log("1");
         job.start();
       })
+    }
+
+    function imitationOfOrderOnTheWay(finishTime, order, car) {
+      return new CronJob(finishTime, () => {
+        console.log('here');
+        return Promise.all([
+          Order.findOneAndUpdate({ "_id": order._id }, { $set: { status: 'delivered', arrivalDate: Date.now() } }, { new: true }),
+          Cars.findOneAndUpdate({ "_id": car._id }, {
+            $set: { orderId: null, status: "available", endTime: null },
+            $pop: { nextOrders: -1 }
+          }, { new: true })
+        ]);
+      }, null, false, 'Europe/Kiev');
     }
 
     function takeNewOrders(){
@@ -136,13 +143,13 @@ module.exports = (app) => {
     //     let value = true;
     //     cars.forEach(car => {
     //       if(car.nextOrders.length>0){
-    //         sendCar(car.nextOrders[0],car._id);
+    //         return sendCar(car.nextOrders[0],car._id);
     //       }
     //       else{
     //         if(value){
     //           value = false;
     //           console.log("set estimete for new orders")
-    //           takeNewOrders()
+    //           return takeNewOrders()
     //           .then(orders=>{
     //             return ordersDelivery.setEstimateForNewOrders(orders,[]);
     //           })
@@ -152,15 +159,23 @@ module.exports = (app) => {
     //   });
     // });
 
+    // takeNewOrders()
+    // .then(orders=>{
+    //   return ordersDelivery.setEstimateForNewOrders(orders);
+    // })
+
     function getEstimateForOrder(orderId){
       return Order.findOne({"_id":orderId})
       .then(order=>{
-        return order.arrivalDate;
+        return {"arrivalDate":order.arrivalDate,"id":order._id};
       })
     }
     
     function getAllOrdersId(){
-      return Order.find().map(i => i._id);
+      return Order.find()
+      .then(orders=>{
+        return orders.map(order => order._id);
+      })
     }
     
     function getEstimateForOrders(ordersId){
@@ -171,13 +186,9 @@ module.exports = (app) => {
         }
         return resolve(ordersId);
       })
-      .map(getEstimateForOrder); 
+      .then(ordersId=>{
+        return Promise.all(ordersId.map(id =>getEstimateForOrder(id)));
+      })
     }
-
-    function getOrderStatus(orderId){
-      return Order.findById(orderId)
-      .then(order=> order.status)
-    }
-
 }
 

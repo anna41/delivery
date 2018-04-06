@@ -20,8 +20,21 @@ export const addCar = () => {
   return (dispatch, getState) => {
     axios.put('/car')
     .then(response => {
-      if(response.data=="Success"){
-        console.log("Success");
+      if(response.status==200){
+        console.log("Success response",response);
+        return dispatch(loadCars());
+      }
+    });
+  }
+};
+
+export const addCarWithName = (name) => {
+  console.log("add car",name);
+  return (dispatch, getState) => {
+    axios.put('/newCar/'+name)
+    .then(response => {
+      if(response.status==200){
+        console.log("Success response",response);
         return dispatch(loadCars());
       }
     });
@@ -46,9 +59,7 @@ export const onDelete = (car) => {
   return (dispatch, getState) => {
     axios.delete('/car/'+car._id)
     .then(response => {
-      console.log(response);
-      if(response.data=="Success"){
-        console.log("Success");
+      if(response.status==200){
         return dispatch(loadCars());
       }
     });

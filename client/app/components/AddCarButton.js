@@ -3,31 +3,41 @@ import axios from 'axios';
 import FloatingActionButton from 'material-ui/FloatingActionButton';
 import ContentAdd from 'material-ui/svg-icons/content/add';
 import { connect } from 'react-redux';
-import {addCar} from '../logic';
+import AddCar from './AddCar';
 
 class AddCarButton extends Component{
 
-    constructor(props) {
-        super(props);
-    }
-
-    
-    addCarOnClick(){
-        this.props.addCar();
+    constructor () {
+        super()
+        this.state = {
+          isHidden: true
+        }
     }
       
+    toggleHidden () {
+        this.setState({
+          isHidden: !this.state.isHidden
+        })
+    }
+
+    onClick() {
+        this.setState({ showResults: true });
+    }
 
     render(){
         return (
-            <FloatingActionButton onClick={this.addCarOnClick.bind(this)}>
-            <ContentAdd />
-           </FloatingActionButton>
-           
+            <div>
+            <FloatingActionButton onClick={this.toggleHidden.bind(this)}>
+                <ContentAdd />
+            </FloatingActionButton>
+
+                {!this.state.isHidden && <AddCar />}
+            </div>
         )
     }
 }
 
 export default connect(
-    null, {addCar}
+    null, {}
 )(AddCarButton);
 

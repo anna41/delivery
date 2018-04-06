@@ -1,9 +1,10 @@
+var ObjectId = require('mongodb').ObjectID;
 var mongoose = require("mongoose");
 var mongooseSchema = require('./schema');
 const mongoURL = 'mongodb://Anna2:Aa12345@ds247078.mlab.com:47078/delivery';
 mongoose.connect(mongoURL);
 var googleMapsClient = require('@google/maps').createClient({
-  key: 'AIzaSyBUjFynG_oDGBJ05AVwTq_etAIqAvEd-rM',
+  key: 'AIzaSyAzCRHdVtYccctAdksMC-1WDV4pmBmc_yc',
   Promise: Promise
 });
 var _ = require('lodash');
@@ -12,67 +13,71 @@ var _ = require('lodash');
 Cars = mongoose.model("Cars", mongooseSchema.carScheme);
 Order = mongoose.model("Order",mongooseSchema.orderScheme,"order");
 
-    function calculateTimeBetweenTwoPoints(start,end) {
-      // console.log("start",start);
-      // console.log("end",end);
+var tenYearsForward = 10*365*24*60*60*1000;
+
+    function calculateTimeBetweenTwoPoints(startPoint,endPoint) {
+      // console.log("start",startPoint);
+      // console.log("end",endPoint);
       var time;
       return googleMapsClient.directions({
-        origin:  start,
-        destination: end,
+        origin:  startPoint,
+        destination: endPoint,
         mode: 'driving'
       }).
       asPromise()
       .then(data=>{
-        //console.log("time in google",data.json.routes[0].legs[0].duration.value);
+       // console.log("time in google",data.json.routes[0].legs[0].duration.value);
         return data.json.routes[0].legs[0].duration.value;
       })
-      .catch(data=>{
-        console.log("something went wrong")
+      .catch(err=>{
+        console.log("errrrror");
       })
     }
 
     function getCarWithCalculatedTimeOfDelivery(car,orderStartPoint){
-      return calculateTimeBetweenTwoPoints(car.possible_arrival_point,orderStartPoint)
-          .then(time =>{
-            car.availableTime = checkIfTheAvailableDateIsUpToDate(car.availableTime);
-            car.availableTime = new Date(+car.availableTime + time*1000);
-            return car;
-          })
+      return calculateTimeBetweenTwoPoints(car.possibleArrivalPoint,orderStartPoint)
+      .then(time =>{
+        car.availableTime = new Date(+checkIfTheAvailableDateIsUpToDate(car.availableTime) + time*1000);
+          return car;
+        })
     }
 
     function checkIfTheAvailableDateIsUpToDate(carDate){
       carDate = new Date(carDate);
-      var nowDate =new Date(Date.now());
-        if(carDate<nowDate)
-         carDate = nowDate;
-        return carDate;
+      var nowDate =new Date();
+      if(carDate<nowDate)
+        carDate = nowDate;
+      return carDate;
     }
 
     function getAllCarsWithCalculatedTimeOfDelivery(cars, orderId, orderPoints) {
+     //console.log('orderPoints')
       return cars.map(car => {
-        car.orderId = orderId;
+        car.orderId = orderId; 
         return getCarWithCalculatedTimeOfDelivery(car, orderPoints[0]);
       });
     }
 
     function getNearestCarForOrder(orderId){
+      //console.log('in get',orderId)
       var orderPoints;
       return getStartAndEndPointsOfOrder(orderId)
       .then(data=>{
+        //console.log('in data',data)
         orderPoints = data;
         return getActiveCars();
       })
-      .then(cars=>{       
-        let carsArr = getAllCarsWithCalculatedTimeOfDelivery(cars, orderId, orderPoints);
-        return Promise.all(carsArr)
+      .then(cars=>{ 
+        //console.log('in get oederPoints',cars)     
+        return Promise.all(getAllCarsWithCalculatedTimeOfDelivery(cars, orderId, orderPoints))
         .then(chooseNearestCarToOrder);
        })
     }
-
+ 
     function chooseNearestCarToOrder(cars){
       var nearestCar={};
-          var bestTime = new Date(+Date.now()+10*365*24*60*60*1000);
-          cars.forEach(car => {
+          var bestTime = new Date(+Date.now()+tenYearsForward);
+          cars.map(car => {
             if(car.availableTime<bestTime){
               bestTime = car.availableTime;
               nearestCar=car;
@@ -82,11 +87,12 @@ Order = mongoose.model("Order",mongooseSchema.orderScheme,"order");
     }
 
     function getStartAndEndPointsOfOrder(orderId){
+     // console.log("id0",orderId);
       var points=[];
       return Order.findById(orderId)
       .then(order=>{
-        points.push(order.departure_point);
-        points.push(order.arrival_point);
+        points.push(order.departurePoint);
+        points.push(order.arrivalPoint);
         return points;
       })
     }
@@ -103,43 +109,43 @@ Order = mongoose.model("Order",mongooseSchema.orderScheme,"order");
       });
       return Promise.all(carsWithOrdersDetails)
       .then(cars=>{
-        console.log("here")
         carsWithOrdersDetails = _.groupBy(cars, '_id');
         return getActiveCarsId();
       })
       .then(carsId=>{
+        let changesInDB =[];
         for(let i = 0;i<carsId.length;i++){
           let carWithNearestOrder = findCarWithClosestOrder(carsWithOrdersDetails,carsId,i);
           if(carWithNearestOrder){
             odrersIdInQueue.push(carWithNearestOrder.orderId);
-            return Order.findOne({"_id":carWithNearestOrder.orderId})
+            Order.findOne({"_id":carWithNearestOrder.orderId})
             .then(order=>{
-              return addOrderToQueue(order,carWithNearestOrder);
+              changesInDB.push(saveChangesInDB(order,carWithNearestOrder));
             })
           }
         }
+        return Promise.all([odrersIdInQueue,changesInDB]);
       })
-      .then(()=>{
-        console.log("odrersIdInQueue",odrersIdInQueue);
-        return odrersIdInQueue;
+      .then((data)=>{
+        console.log("odrersIdInQueue",data[0]);
+        return data[0];
       })
     }
 
     function getActiveCarsId(){
       return Cars.find({active:true})
       .then(cars=>{
-        let carsId = cars.map(car => car._id);
-        
+        let carsId = cars.map(car => car._id); 
         return Promise.all(carsId);
       })
     }
 
-    function addOrderToQueue(order,car){
+    function saveChangesInDB(order,car){
       let promiseArray =[];
-      console.log("order id should",order._id);
+      //console.log("order id should",order._id);
       let arrivalTime = new Date(+car.availableTime + Number(order.time.value) * 1000);
       promiseArray.push(Cars.findOneAndUpdate({ "_id": car._id }, {
-          $set: { availableTime: arrivalTime, possible_arrival_point:order.arrival_point },
+          $set: { availableTime: arrivalTime, possibleArrivalPoint:order.arrivalPoint },
           $push: { nextOrders: String(order._id) }
         }, { new: true })
       );
@@ -161,27 +167,32 @@ Order = mongoose.model("Order",mongooseSchema.orderScheme,"order");
     }
 
     function setEstimateForNewOrders(orders, ordersId = []){
-      if(ordersId.length>0){
-        orders = deleteAddedOrders(orders,ordersId);
-      }
-      if(orders.length>0){
-       return addNearestOrdersToQueue(orders)
+      return new Promise(resolve=> {
+        if(ordersId.length>0){
+          return resolve(deleteAddedOrders(orders,ordersId));
+        }
+        return resolve(orders);
+      })
+      .then(orders=>{
+        if(orders.length>0){
+        return addNearestOrdersToQueue(orders)
         .then(ordersId=>{
           return setEstimateForNewOrders(orders,ordersId);
         })
       }
+      })
     }
 
     function deleteAddedOrders(orders,orderIds){
       return orders.filter(order =>{
-        return !_.find(orderIds,(orderId) =>orderId==order._id);
+        return !_.find(orderIds,(orderId)=>orderId==order._id);
       }); 
     }
 
     function recalculateAllOrdersQueue(){
       return resetCarData()
-      .then(() => getOrdersThatIsInTheStore())
-      .then(orders=> setEstimateForNewOrders(orders));
+      .then(getOrdersThatIsInTheStore)
+      .then(setEstimateForNewOrders);
     }
 
     function resetCarData(){
@@ -193,7 +204,8 @@ Order = mongoose.model("Order",mongooseSchema.orderScheme,"order");
           if(!availableDate){
             availableDate = new Date(Date.now());
           }
-          carsArray.push(Cars.findOneAndUpdate({"_id":car._id},{ $set: {possible_arrival_point:car.departure_point,nextOrders:[],availableTime:availableDate} },{new:true}));
+          carsArray.push(Cars.findOneAndUpdate({"_id":car._id},
+          { $set: {possibleArrivalPoint:car.departurePoint,nextOrders:[],availableTime:availableDate} },{new:true}));
         });
         return Promise.all(carsArray);
       })
@@ -206,7 +218,7 @@ Order = mongoose.model("Order",mongooseSchema.orderScheme,"order");
     module.exports={
       getStartAndEndPointsOfOrder,
       setEstimateForNewOrders,
-      addOrderToQueue,
+      saveChangesInDB,
       recalculateAllOrdersQueue,
       getOrdersThatIsInTheStore,
       checkIfTheAvailableDateIsUpToDate,

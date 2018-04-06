@@ -6,6 +6,7 @@ chai.use(asserttype);
 chai.use(require('chai-like'));
 chai.use(require('chai-things'));
 const app1 = require('../server/controllers/calculateOrdersDelivery');
+var ObjectId = require('mongodb').ObjectID;
 
 
 
@@ -33,20 +34,20 @@ describe("App",()=>{
     describe(' deleteAddedOrders(orders,orderIds)',()=>{
 
         let orders = [{
-            "_id" : "5aa697dfd7060e3937697333",
+            "_id" : ObjectId("5aa697dfd7060e3937697667"),
             "price" : 200,
             "status" : "in the store"
-        },{"_id" : "5aa697dfd7060e3937697334",
+        },{"_id" : ObjectId("5aa697dfd7060e3937697667"),
         "price" : 200,
         "status" : "in the store"},
-        {"_id" : "5aa697dfd7060e3937697335",
+        {"_id" : ObjectId("5aa697dfd7060e3937697667"),
         "price" : 200,
         "status" : "in the store"},
-        {"_id" : "5aa697dfd7060e3937697336",
+        {"_id" : ObjectId("5aa697dfd7060e3937697667"),
         "price" : 200,
         "status" : "in the store"}];
 
-        let orderIds = ["5aa697dfd7060e3937697336","5aa697dfd7060e3937697335"];
+        let orderIds = ['5aa697dfd7060e3937697336','5aa697dfd7060e3937697335'];
 
         it('should return array',()=>{
 
