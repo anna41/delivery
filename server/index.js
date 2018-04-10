@@ -13,4 +13,4 @@ app.use(bodyParser.urlencoded({
 app.use(express.static('client'));
 
 controllers.set(app);
-module.exports.start = () => app.listen(process.env.PORT || config.port, () => console.log('App listening on port '+ config.port));
+module.exports.start = () => app.listen(process.env.PORT || config.port, () => console.log('App listening on port ' + config.port));

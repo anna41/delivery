@@ -2,6 +2,11 @@ import axios from 'axios';
 import * as carActions from './actions/cars';
 import _ from 'lodash';
 import * as orderActions from './actions/orders';
+import * as carRouteActions from './actions/carRoute';
+import { loadProgressBar } from 'axios-progress-bar';
+
+
+loadProgressBar();
 
 export const loadCars = () => {
   console.log("load cars");
@@ -71,6 +76,26 @@ export const loadOrders = (status) => {
     axios.get('/orders/'+status)
     .then(response => {
         return dispatch(orderActions.loadOrders(response.data));
+    });
+  }
+};
+
+export const onMap = (order) => {
+  return (dispatch, getState) => {
+    axios.get('/orders/'+status)
+    .then(response => {
+        return dispatch(orderActions.loadOrders(response.data));
+    });
+  }
+};
+
+export const loadOrdersRoutes = (orderId) => {
+  return (dispatch, getState) => {
+    console.log("orderId",orderId)
+    axios.get('/orderRoutes/'+orderId)
+    .then(response => {
+      console.log("resp",response)
+      return dispatch(carRouteActions.loadOrdersRoute(response.data));
     });
   }
 };
